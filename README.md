@@ -7,7 +7,7 @@ Feel free to create pull requests to add your own configuration files. We organi
 
 Current categories:
 
-* publications: work related to published papers
-* corpora: configurations for specific corpora amd data sets
-* models: configuraion files used to train specific models
+* [publications](https://github.com/Helsinki-NLP/OpusFilter-hub/tree/main/publications): work related to published papers
+* [corpora](https://github.com/Helsinki-NLP/OpusFilter-hub/tree/main/corpora): configurations for specific corpora amd data sets
+* [models](https://github.com/Helsinki-NLP/OpusFilter-hub/tree/main/models): configuraion files used to train specific models
 
