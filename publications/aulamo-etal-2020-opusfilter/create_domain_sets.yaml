@@ -1,0 +1,109 @@
+# Note: This will need the fi-en WMT shared task dev sets 2015, 2016,
+# and 2017 stored in wmt2019-dev below the current directory as text
+# files. The data is available from
+# http://data.statmt.org/wmt19/translation-task/dev.tgz and the SGML
+# tags can be stripped using e.g.
+# https://gist.github.com/Rj7/15e64d9ca4faacdda235159083bd3b20.
+#
+# Run first the steps in prepare_data.yaml and create_ce_sets.yaml.
+
+common:
+
+  output_directory: paracrawl_fi-en
+
+steps:
+
+  - type: concatenate
+    parameters:
+      inputs:
+      - ../wmt2019-dev/newsdev2015.fi.txt
+      - ../wmt2019-dev/newstest2016.fi.txt
+      - ../wmt2019-dev/newstest2017.fi.txt
+      output: wmt-news-train.fi.gz
+
+  - type: concatenate
+    parameters:
+      inputs:
+      - ../wmt2019-dev/newsdev2015.en.txt
+      - ../wmt2019-dev/newstest2016.en.txt
+      - ../wmt2019-dev/newstest2017.en.txt
+      output: wmt-news-train.en.gz
+
+  - type: filter
+    parameters:
+      inputs: [wmt-news-train.fi.gz, wmt-news-train.en.gz]
+      outputs: [wmt-news-train-filtered.fi.gz, wmt-news-train-filtered.en.gz]
+      filters:
+        - LengthFilter:
+            unit: word
+            min_length: 1
+            max_length: 1000
+
+  - type: train_ngram
+    parameters:
+      data: wmt-news-train-filtered.en.gz
+      parameters:
+        norder: 15
+        dscale: 0.01
+      model: wmt-news.en.arpa.gz
+
+  - type: train_ngram
+    parameters:
+      data: wmt-news-train-filtered.fi.gz
+      parameters:
+        norder: 15
+        dscale: 0.01
+      model: wmt-news.fi.arpa.gz
+
+  - type: score
+    parameters:
+      inputs: [ce.sents.fi.70.gz, ce.sents.en.70.gz]
+      output: domain-scores.fi-en.jsonl.gz
+      filters:
+        - CrossEntropyFilter:
+            lm_params:
+              - filename: wmt-news.fi.arpa.gz
+                interpolate:
+                - [fi.arpa.gz, 0.01]
+                - [bg.arpa.gz, 0.01]
+              - filename: wmt-news.en.arpa.gz
+                interpolate:
+                - [en.arpa.gz, 0.01]
+                - [bg.arpa.gz, 0.01]
+
+  - type: sort
+    parameters:
+      inputs:
+      - ce.sents.fi.70.gz
+      - ce.sents.en.70.gz
+      - domain-scores.fi-en.jsonl.gz
+      outputs:
+      - ce.sents.domain.fi.70.gz
+      - ce.sents.domain.en.70.gz
+      - domain-scores-sorted.fi-en.jsonl.gz
+      values: domain-scores.fi-en.jsonl.gz
+      key:
+      - CrossEntropyFilter.0
+      - CrossEntropyFilter.1
+      combine_operator: add
+
+  - type: head
+    parameters:
+        inputs:
+        - ce.sents.domain.fi.70.gz
+        - ce.sents.domain.en.70.gz
+        outputs:
+        - ce.sents.domain.fi.60.gz
+        - ce.sents.domain.en.60.gz
+        n: 1293641
+
+  - type: head
+    parameters:
+        inputs:
+        - ce.sents.domain.fi.70.gz
+        - ce.sents.domain.en.70.gz
+        outputs:
+        - ce.sents.domain.fi.50.gz
+        - ce.sents.domain.en.50.gz
+        n: 1078034
+
